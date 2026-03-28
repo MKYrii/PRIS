@@ -1,15 +1,20 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: LegalAssist AI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: chats
+    description: Chat session operations
+  - name: messages
+    description: Chat message operations
 paths:
   /healthz:
     get:
@@ -24,6 +29,212 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current auth user
+      description: Returns the currently authenticated user or null
+      responses:
+        "200":
+          description: Current auth state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /chats:
+    get:
+      operationId: listChats
+      tags: [chats]
+      summary: List user chats
+      description: Returns all chats for the authenticated user
+      responses:
+        "200":
+          description: List of chats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chat"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createChat
+      tags: [chats]
+      summary: Create a new chat
+      description: Creates a new chat session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatBody"
+      responses:
+        "201":
+          description: Created chat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chat"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats/{chatId}:
+    get:
+      operationId: getChat
+      tags: [chats]
+      summary: Get a chat
+      description: Returns a single chat with its messages
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chat with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatWithMessages"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteChat
+      tags: [chats]
+      summary: Delete a chat
+      description: Deletes a chat and all its messages
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats/{chatId}/messages:
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      description: Sends a text message and gets an AI response
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "200":
+          description: AI response message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats/{chatId}/upload:
+    post:
+      operationId: uploadDocument
+      tags: [messages]
+      summary: Upload a document
+      description: Uploads a PDF or Word document and analyzes it
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: AI analysis of the document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +245,160 @@ components:
       required:
         - status
 
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+      required:
+        - user
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: ["string", "null"]
+      required:
+        - code
+        - code_verifier
+        - redirect_uri
+        - state
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        userId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - userId
+        - createdAt
+        - updatedAt
+
+    ChatWithMessages:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        userId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required:
+        - id
+        - title
+        - userId
+        - createdAt
+        - updatedAt
+        - messages
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        chatId:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        fileName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - chatId
+        - role
+        - content
+        - createdAt
+
+    CreateChatBody:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

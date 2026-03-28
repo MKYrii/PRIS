@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For smooth page transitions and micro-interactions"
+  "react-markdown": "To render AI responses with bold text, lists, and links properly"
+  "clsx": "Utility for conditionally joining classNames"
+  "tailwind-merge": "Utility for merging tailwind classes without conflicts"
+  "date-fns": "For formatting chat timestamps nicely"
+
+images:
+  - path: "artifacts/legal-assist/public/images/auth-bg.png"
+    description: "A stunning, clean, minimal abstract geometric background with soft white and light indigo gradients, conveying trust, law, and modern professional technology."
+    aspect_ratio: "16:9"
+  - path: "artifacts/legal-assist/public/images/logo-icon.png"
+    description: "A minimal, modern geometric logo icon for a legal tech company in deep indigo. Transparent background, sharp lines."
+    aspect_ratio: "1:1"
+
+notes:
+  - "The app relies on @workspace/replit-auth-web for authentication."
+  - "Uses @workspace/api-client-react for generated TanStack Query hooks."
